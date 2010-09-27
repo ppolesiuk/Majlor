@@ -9,7 +9,7 @@ let smtpServe() =
     server.Start()
     while true do
         let client = server.AcceptTcpClient();
-        let connection = Majlor.SMTP.Connection(client.GetStream())
+        let connection = Majlor.SMTP.Connection client
         ()
 
 let main =

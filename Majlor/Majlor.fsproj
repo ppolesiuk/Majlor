@@ -40,8 +40,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Settings.fs" />
-    <Compile Include="Connection.fs" />
+    <Compile Include="SmtpConnection.fs" />
     <Compile Include="Program.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Parsor\Parsor.fsproj">
+      <Name>Parsor</Name>
+      <Project>{5bddec97-1cfc-4ac2-8610-8b703b5df6ef}</Project>
+      <Private>True</Private>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets" Condition="!Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
   <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition=" Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
