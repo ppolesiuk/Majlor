@@ -11,6 +11,7 @@ open System.Threading
 
 type Command =
     | Helo of string
+    | Noop
     | Quit
     | SyntaxError
     | Unknown
@@ -30,7 +31,8 @@ type Connection(tcpClient : TcpClient) as self =
             (skipChar ' ' <!> fun() -> (readRestOfLine |>> Helo)) ^|
             (skipChar '\r' >>. skipChar '\n' >>. parsor.Return(Helo ""))
         ) ^|
-        (skipStringIgnoreCase "QUIT" <!> fun() -> parsor.Return Quit) ^|
+        (skipStringIgnoreCase "NOOP" <!> fun() -> parsor.Return Noop) ^|
+        (skipStringIgnoreCase "QUIT" <!> fun() -> parsor.Return Quit) ^|        
         (skipLine >>. parsor.Return Unknown)
 
     //==============================================================
@@ -56,6 +58,9 @@ type Connection(tcpClient : TcpClient) as self =
         match ins with
         | Helo cl ->
             client <- cl
+            self.Message 250
+            mainState()
+        | Noop ->
             self.Message 250
             mainState()
         | Quit ->
