@@ -39,6 +39,7 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Settings.fs" />
     <Compile Include="Connection.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

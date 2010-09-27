@@ -5,7 +5,7 @@ open System.Net
 open System.Net.Sockets
 
 let smtpServe() =
-    let server = TcpListener(IPAddress.Any, 587)
+    let server = TcpListener(IPAddress.Any, Settings.Port)
     server.Start()
     while true do
         let client = server.AcceptTcpClient();
