@@ -11,10 +11,19 @@ open System.Threading
 
 type Command =
     | Helo of string
+    | Mail of string * string
     | Noop
     | Quit
     | SyntaxError
     | Unknown
+    override this.ToString() =
+        match this with
+        | Helo x -> "Helo " + x
+        | Mail(x,y) -> "Mail from:<" + x + "@" + y + ">"
+        | Noop -> "Noop"
+        | Quit -> "Quit"
+        | SyntaxError -> "SyntaxError"
+        | Unknown -> "Unknown"
 
 type Connection(tcpClient : TcpClient) as self =
     //==============================================================
@@ -26,13 +35,29 @@ type Connection(tcpClient : TcpClient) as self =
             ((notFollowedBy (skipChar '\r' .>> skipChar '\n') "") >>. getToken) |>
             foldl "" (fun s c -> s + c.ToString())
         ) .>> skipChar '\r' .>> skipChar '\n'
+
+    static let path =
+        parsor{
+            do! skipMany(skipCharPred(fun c -> c <> '\n' && c <> '<') "")
+            do! skipChar '<'
+            let! user = foldl "" (fun s c -> s + c.ToString()) (parseChar (fun c -> c <> '\n' && c <> '@') "")
+            do! skipChar '@'
+            let! domain = foldl "" (fun s c -> s + c.ToString()) (parseChar (fun c -> c <> '\n' && c <> '>') "")
+            do! skipChar '>'
+            do! skipLine
+            return (user, domain)
+        }
+
     static let parseInstruction =
         (skipStringIgnoreCase "HELO" <!> fun() ->
             (skipChar ' ' <!> fun() -> (readRestOfLine |>> Helo)) ^|
             (skipChar '\r' >>. skipChar '\n' >>. parsor.Return(Helo ""))
         ) ^|
-        (skipStringIgnoreCase "NOOP" <!> fun() -> parsor.Return Noop) ^|
-        (skipStringIgnoreCase "QUIT" <!> fun() -> parsor.Return Quit) ^|        
+        (skipStringIgnoreCase "MAIL" <!> fun() ->
+            skipStringIgnoreCase " FROM:" >>. (path |>> Mail)
+        ) ^|
+        (skipStringIgnoreCase "NOOP" <!> fun() -> skipChar '\r' >>. skipChar '\n' >>. parsor.Return Noop) ^|
+        (skipStringIgnoreCase "QUIT" <!> fun() -> skipChar '\r' >>. skipChar '\n' >>. parsor.Return Quit) ^|        
         (skipLine >>. parsor.Return Unknown)
 
     //==============================================================
@@ -60,6 +85,9 @@ type Connection(tcpClient : TcpClient) as self =
             client <- cl
             self.Message 250
             mainState()
+        | Mail(user, domain) ->
+            self.Message 502
+            mainState()
         | Noop ->
             self.Message 250
             mainState()
@@ -73,15 +101,18 @@ type Connection(tcpClient : TcpClient) as self =
                 self.Message 500
                 mainState()
         | Unknown ->
-            if clientInput.IsEmpty then
-                self.Close()
-            else
-                self.Message 502
-                mainState()
+            self.Message 502
+            mainState()
 
     let serverStart() =
-        self.Message 220
-        mainState()
+        try
+            self.Message 220
+            mainState()
+        with
+        | FatalError _ ->
+            self.Close()
+        | :? System.IO.IOException ->
+            self.Close()
 
     do
         let th = Thread(ThreadStart serverStart)
